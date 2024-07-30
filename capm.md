@@ -81,7 +81,12 @@ $$
 $$
 
 ```r
-#fill the code
+# Daily Return for AMD
+df <- df %>%
+mutate(AMD_returns = (lead(AMD) - AMD) / AMD)
+# Daily Return for SP500
+df <- df %>%
+mutate(GSPC_returns = (lead(GSPC) - GSPC) / GSPC)
 ```
 
 - **Calculate Risk-Free Rate**: Calculate the daily risk-free rate by conversion of annual risk-free Rate. This conversion accounts for the compounding effect over the days of the year and is calculated using the formula:
@@ -91,21 +96,29 @@ $$
 $$
 
 ```r
-#fill the code
+# Daily Risk-Free Rate
+df <- df %>%
+mutate(daily_RF = (1 + RF / 100)ˆ(1/360) - 1)
 ```
 
 
 - **Calculate Excess Returns**: Compute the excess returns for AMD and the S&P 500 by subtracting the daily risk-free rate from their respective returns.
 
 ```r
-#fill the code
+# Excess Returns
+df <- df %>%
+mutate(AMD_excess_returns = AMD_returns - daily_RF,
+GSPC_excess_returns = GSPC_returns - daily_RF)
 ```
 
 
 - **Perform Regression Analysis**: Using linear regression, we estimate the beta (\(\beta\)) of AMD relative to the S&P 500. Here, the dependent variable is the excess return of AMD, and the independent variable is the excess return of the S&P 500. Beta measures the sensitivity of the stock's returns to fluctuations in the market.
 
 ```r
-#fill the code
+library(tidyverse)
+library(broom)
+model <- lm(AMD_excess_returns ~ GSPC_excess_returns, data = df)
+summary(model)
 ```
 
 
@@ -113,14 +126,33 @@ $$
 
 What is your \(\beta\)? Is AMD more volatile or less volatile than the market?
 
-**Answer:**
+Our β is 1.5700073. A β of 1.5700073 means that the dependent variable (AMD’s stock price) is approximately
+57% more volatile than the market represented by the independent variable (S&P500). A β that is
+greater than one, such as the one for this task, means that the dependent variable is more likely to move
+(more sensitive) in respect to the independent variable. So in this example, if the market goes up by 1%,
+then AMD’s stock will go up by around 1.57%, and if the market goes down by 1%, then AMD share will
+also go down by 1.57%. Higher volatility suggests that AMD’s stock is more sensitive to market movements.
+What this means to investors is, that if the market experiences a rise or fall, AMD’s stock is likely to rise or
+fall more steeply in comparison. A stock that is more volatile are considered greater risks, but offer greater
+gains, so investors who are more bullish can utilize such stocks in their portfolio, if investors want to be more
+safe, they can opt for stock options that have lower β values, for less volatile investment options.
 
 
 #### Plotting the CAPM Line
 Plot the scatter plot of AMD vs. S&P 500 excess returns and add the CAPM regression line.
 
 ```r
-#fill the code
+# Load the necessary library for plotting
+library(ggplot2)
+# Create a scatter plot with a regression line
+ggplot(data = df, aes(x = GSPC_excess_returns, y = AMD_excess_returns)) +
+geom_point(color = 'blue', alpha = 0.6) +
+geom_smooth(method = "lm", color = 'red', se = TRUE) +
+labs(title = "Scatter Plot of AMD vs. S&P 500 Excess Returns",
+x = "S&P 500 Excess Returns",
+y = "AMD Excess Returns",
+caption = "Data source: Calculated Excess Returns") +
+theme_minimal()
 ```
 
 ### Step 3: Predictions Interval
@@ -128,8 +160,30 @@ Suppose the current risk-free rate is 5.0%, and the annual expected return for t
 
 
 
-**Answer:**
+So given that the risk free rate is 5%, with the expected market return to be 13.3% and the beta value from
+previous question, the expected annual return for AMD is 0.1803106. The prediction interval is [-0.4904554
+0.8510766].
 
 ```r
-#fill the code
+# Calculating Expected Annual Return of AMD:
+risk_free_rate <- 0.05 # Current risk-free rate is 5%
+expected_market_return <- 0.133 # Expected annual return for the S&P 500 is 13.3%
+beta_AMD <- 1.5700073 # Placeholder for beta of AMD, replace if you have a specific value
+expected_annual_ERI <- risk_free_rate + beta_AMD * (expected_market_return - risk_free_rate)
+print(expected_annual_ERI)
+# Prediction Interval
+# Prepping for Calculation
+model_sum<-summary(model)
+mean<-mean(df$GSPC_excess_returns[!is.na(df$GSPC_excess_returns)])
+n<-length(df$GSPC_excess_returns[!is.na(df$GSPC_excess_returns)])
+daily_standard_error<-sqrt(sum(residuals(model)ˆ2/(n-1-1)))
+annual_standard_error<-sqrt(252)*daily_standard_error
+alpha <- 0.10
+n <- nrow(df[-1,])
+t_value <- qt(1-alpha/2, df = n-2)
+print(t_value)
+lower_bound <- expected_annual_ERI - t_value*annual_standard_error
+upper_bound <- expected_annual_ERI + t_value*annual_standard_error
+pi <- c(lower_bound, upper_bound)
+print(pi)
 ```
