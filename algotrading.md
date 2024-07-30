@@ -71,15 +71,37 @@ share_size <- 100
 accumulated_shares <- 0
 
 for (i in 1:nrow(amd_df)) {
-# Fill your code here
+if (i == 1 || amd_df$close[i] < previous_price) {
+# Buy
+amd_df$trade_type[i] <- 'buy'
+amd_df$costs_proceeds[i] <- -amd_df$close[i] * share_size
+accumulated_shares <- accumulated_shares + share_size
+} else if (i == nrow(amd_df)) {
+# Last day, sell
+amd_df$trade_length[i] <- 'sell'
+amd_df$costs_proceeds[i] <- amd_df$close[i] * accumulated_shares
+accumulated_shares <- 0
 }
+# Update previous price
+previous_price <- amd_df$close[i]
+# Update accumulated shares in DataFrame
+amd_df$accumulated_shares[i] <- accumulated_shares
+}
+# Print the updated DataFrame
+print(amd_df)
 ```
 
 
 ### Step 3: Customize Trading Period
 - Define a trading period you wanted in the past five years 
 ```r
-# Fill your code here
+#Define a trading period you wanted in the past five years.
+#{r period}
+# Make sure that the 'date' column is in Date format
+amd_df$date <- as.Date(amd_df$date)
+# Filter rows for the years January 2021 to June 2021
+trading_period_df <- amd_df[amd_df$date >= as.Date("2021-01-01") & amd_df$date <= as.Date("2021-06-30"), # Print filtered DataFrame
+print(trading_period_df)
 ```
 
 
@@ -91,7 +113,37 @@ After running your algorithm, check if the trades were executed as expected. Cal
 - ROI Formula: $$\text{ROI} = \left( \frac{\text{Total Profit or Loss}}{\text{Total Capital Invested}} \right) \times 100$$
 
 ```r
-# Fill your code here
+# Initialize Columns
+trading_period_df$trade_type <- NA
+trading_period_df$costs_proceeds <- NA
+trading_period_df$accumulated_shares <- 0
+# Initialize variables
+previous_price <- 0
+share_size <- 100
+accumulated_shares <- 0
+for (i in 1:nrow(trading_period_df)) {
+if (i == 1 || trading_period_df$close[i] < previous_price) {
+# Buy
+trading_period_df$trade_type[i] <- 'buy'
+trading_period_df$costs_proceeds[i] <- -trading_period_df$close[i] * share_size
+accumulated_shares <- accumulated_shares + share_size
+} else if (i == nrow(trading_period_df)) {
+# Last day, sell
+trading_period_df$trade_length[i] <- 'sell'
+trading_period_df$costs_proceeds[i] <- trading_period_df$close[i] * accumulated_shares
+accumulated_shares <- 0
+}
+# Update previous price
+previous_price <- trading_period_df$close[i]
+# Update accumulated shares in DataFrame
+trading_period_df$accumulated_shares[i] <- accumulated_shares
+}
+# Total profits and loss
+total_profit_loss <- sum(trading_period_df$costs_proceeds, na.rm = TRUE)
+# Calculating Total Capital Invested
+total_invested <- -sum(trading_period_df$costs_proceeds[trading_period_df$trade_type == 'buy'], na.rm = # Calculating ROI
+ROI <- (total_profit_loss / total_invested) * 100
+print(ROI)
 ```
 
 ### Step 5: Profit-Taking Strategy or Stop-Loss Mechanisum (Choose 1)
@@ -100,7 +152,111 @@ After running your algorithm, check if the trades were executed as expected. Cal
 
 
 ```r
-# Fill your code here
+##METHOD 1:
+previous_price <- 0
+accumulated_shares <- 0
+share_size <- 100
+avg_purchase_price <-0
+total_cost <- 0
+profit_margin <- 0.2
+for (i in 1:nrow(trading_period_df)) {
+if (i == nrow(trading_period_df)) {
+trading_period_df$trade_type[i] <- 'sell'
+trading_period_df$costs_proceeds[i] <- accumulated_shares * trading_period_df$close[i]
+}
+else if (previous_price == 0 || trading_period_df$close[i] < previous_price) {
+trading_period_df$trade_type[i] <- 'buy'
+trading_period_df$costs_proceeds[i] <- -trading_period_df$close[i] * share_size
+total_cost <- total_cost - trading_period_df$costs_proceeds[i]
+accumulated_shares <- accumulated_shares + share_size
+}
+else if (i > 1 && avg_purchase_price * (1 + profit_margin) <= trading_period_df$close[i]) {
+trading_period_df$trade_type[i] <- 'sell'
+shares_to_sell <- accumulated_shares / 2
+trading_period_df$costs_proceeds[i] <- trading_period_df$close[i] * shares_to_sell
+accumulated_shares <- accumulated_shares - shares_to_sell
+total_cost <- total_cost - (shares_to_sell * avg_purchase_price )
+}
+else {
+trading_period_df$trade_type[i] <- 'hold'
+}
+previous_price <- trading_period_df$close[i]
+trading_period_df$accumulated_shares[i] <- accumulated_shares
+avg_purchase_price = total_cost / accumulated_shares
+}
+# Set accumulated shares to 0
+trading_period_df$accumulated_shares[nrow(trading_period_df)] <- 0
+print(trading_period_df)
+
+##METHOD 2
+# Make copy
+if (!exists("original_trading_period_df")) {
+original_trading_period_df <- trading_period_df
+}
+trading_period_df <- data.frame(original_trading_period_df)
+# Initialize Columns
+trading_period_df$returns <- rep(0, nrow(trading_period_df))
+trading_period_df$purchase_price <- rep(0, nrow(trading_period_df))
+trading_period_df$number_of_shares_bought_at_price <- rep(0, nrow(trading_period_df))
+# Initialize Variables
+profit_percentage <- 0.2 # Profit target (20% above purchase price)
+# Setting purchase prices and calculating returns
+for (i in 1:nrow(trading_period_df)) {
+if (!is.na(trading_period_df$trade_type[i]) && trading_period_df$trade_type[i] == "buy") {
+trading_period_df$purchase_price[i] <- trading_period_df$close[i]
+trading_period_df$number_of_shares_bought_at_price[i] <- 100
+}
+}
+# Applying the Profit-Taking Strategy
+for (i in 1:nrow(trading_period_df)) {
+if (trading_period_df$purchase_price[i] > 0) {
+for (j in (i + 1):nrow(trading_period_df)) {
+if (trading_period_df$close[j] >= (1 + profit_percentage) * trading_period_df$purchase_price[trading_period_df$returns[i] <- trading_period_df$close[j] * 0.5 * trading_period_df$number_break
+}
+}
+}
+}
+## Update Values for number of shares
+for (i in 1:nrow(trading_period_df))
+if (trading_period_df$returns[i] > 0 ) {
+trading_period_df$number_of_shares_bought_at_price[i] <- trading_period_df$number_of_shares_bought_at_}
+# Compute shares sold during profit-taking events
+trading_period_df$shares_sold <- 0
+for (i in 1:nrow(trading_period_df)) {
+if (trading_period_df$returns[i] > 0) {
+trading_period_df$shares_sold[i] <- 50
+}
+}
+# Sum total shares sold
+total_shares_sold <- sum(trading_period_df$shares_sold)
+# Adjust the second last value of accumulated shares by subtracting total shares sold
+if (nrow(trading_period_df) > 1) {
+trading_period_df$accumulated_shares[nrow(trading_period_df) - 1] <- trading_period_df$accumulated_shares[}
+## Total Profits for trading period
+# Sell all shares
+if (nrow(trading_period_df) > 1) {
+# Get the number of remaining shares
+remaining_shares <- trading_period_df$accumulated_shares[nrow(trading_period_df) - 1]
+# Get the closing price
+final_day_closing_price <- trading_period_df$close[nrow(trading_period_df)]
+# Calculate the final value for the costs_proceeds column
+final_costs_proceeds <- remaining_shares * final_day_closing_price
+# Update the final row of the costs_proceeds column
+trading_period_df$costs_proceeds[nrow(trading_period_df)] <- final_costs_proceeds
+}
+# Calculate total returns
+total_returns <- sum(trading_period_df$returns, na.rm = TRUE)
+# Calculate total costs
+total_costs <- sum(trading_period_df$costs_proceeds[-nrow(trading_period_df)], na.rm = TRUE)
+# Calculate final profit for the last day
+final_profit_for_period <- total_returns + total_costs + final_costs_proceeds
+# Set the final day's 'accumulated_shares' to 0
+trading_period_df$accumulated_shares[nrow(trading_period_df)] <- 0
+# Set the 'trade_length' column's last value to 'sell'
+trading_period_df$trade_length[nrow(trading_period_df)] <- 'sell'
+print(trading_period_df)
+
+print(final_profit_for_period)
 ```
 
 
@@ -110,10 +266,21 @@ After running your algorithm, check if the trades were executed as expected. Cal
 
 
 ```r
-# Fill your code here and Disucss
+# ROI when implementing profit taking strategy
+ROI_profit_strat <- (final_profit_for_period / -total_costs) * 100
+print(ROI)
 ```
 
-Sample Discussion: On Wednesday, December 6, 2023, AMD CEO Lisa Su discussed a new graphics processor designed for AI servers, with Microsoft and Meta as committed users. The rise in AMD shares on the following Thursday suggests that investors believe in the chipmaker's upward potential and market expectations; My first strategy earned X dollars more than second strategy on this day, therefore providing a better ROI.
+Discussion: The first method has the exact same ROI and total_profit_loss as the original algorithm.
+AMD released many new products during the span of Jan 1 2021 to Jun 30 2021. On Thursday, March
+18 2021, AMD officially announced the RX 6700 XT card and on Monday, 31 may 2021 AMD announced the RX 6000M series of GPUs designed for laptops. Investors got confident with AMD’s releases following these two dates, which led to increase in share prices. The original algorithm and method 1 was better
+positioned to take advantage of the increased share prices as it did not restrict selling to a specific profit
+margin. Method 2 (direct profit taking strategy), while more safe and protecting against sudden downturns,
+was not able to produce a higher profit compared to strategy 1 or Method 1 as it missed out by selling too
+early. The original algorithm was able to produce a profit of: 67 172.0006 dollars and Method 2 was able to
+produce a profit of: 66 510.5002 dollars. The 661.5004 dollar difference in profit decreased the ROI (from
+Original algo to Method 2), with original algo having an ROI of 13.53161 and Method 2 having an ROI of
+13.39835.
 
 
 
